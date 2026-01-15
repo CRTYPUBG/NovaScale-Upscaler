@@ -1,8 +1,9 @@
+import sys
 import ctypes
 import os
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont, QColor, QIcon
 from settings import SettingsPanel
 
 # --- C API Mapping ---
@@ -38,6 +39,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("NovaScale v1.0")
         self.setMinimumSize(420, 680)
+        self.setWindowIcon(QIcon(resource_path("app.ico")))
         self.is_running = False
         
         # Load C Core
