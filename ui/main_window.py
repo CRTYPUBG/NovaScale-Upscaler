@@ -3,7 +3,7 @@ import os
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor
-from ui.settings import SettingsPanel
+from settings import SettingsPanel
 
 # --- C API Mapping ---
 class Config(ctypes.Structure):
@@ -24,6 +24,15 @@ class Stats(ctypes.Structure):
         ("fps", ctypes.c_uint32)
     ]
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -34,9 +43,19 @@ class MainWindow(QMainWindow):
         # Load C Core
         self.lib = None
         try:
-            dll_path = os.path.abspath("ui/novascale.dll")
-            if os.path.exists(dll_path):
-                self.lib = ctypes.CDLL(dll_path)
+            # Check locally, then in packed path
+            dll_candidates = [
+                os.path.abspath("ui/novascale.dll"),
+                os.path.abspath("novascale.dll"),
+                resource_path("novascale.dll")
+            ]
+            
+            for dll_path in dll_candidates:
+                if os.path.exists(dll_path):
+                    self.lib = ctypes.CDLL(dll_path)
+                    break
+            
+            if self.lib:
                 self.lib.NovaScale_GetStats.restype = Stats
                 self.lib.NovaScale_Initialize.restype = ctypes.c_bool
                 self.lib.NovaScale_Start.argtypes = [Config]

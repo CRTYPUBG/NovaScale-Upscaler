@@ -1,0 +1,45 @@
+<svg width="512" height="512" viewBox="0 0 512 512"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background -->
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+
+    <linearGradient id="novaGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="96" fill="url(#bgGrad)"/>
+
+  <!-- Outer scale frame -->
+  <rect x="96" y="96" width="320" height="320"
+        rx="48"
+        fill="none"
+        stroke="url(#novaGrad)"
+        stroke-width="18"/>
+
+  <!-- Inner star / nova -->
+  <g transform="translate(256 256)">
+    <polygon points="0,-90 22,-22 90,0 22,22 0,90 -22,22 -90,0 -22,-22"
+             fill="url(#novaGrad)"/>
+  </g>
+
+  <!-- Scale arrows -->
+  <g stroke="url(#novaGrad)" stroke-width="14" stroke-linecap="round">
+    <!-- top-right -->
+    <line x1="332" y1="180" x2="380" y2="132"/>
+    <line x1="352" y1="132" x2="380" y2="132"/>
+    <line x1="380" y1="160" x2="380" y2="132"/>
+
+    <!-- bottom-left -->
+    <line x1="180" y1="332" x2="132" y2="380"/>
+    <line x1="132" y1="352" x2="132" y2="380"/>
+    <line x1="160" y1="380" x2="132" y2="380"/>
+  </g>
+
+</svg>
