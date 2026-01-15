@@ -1,3 +1,25 @@
+
+# NovaScale![ana](https://github.com/user-attachments/assets/c37012a5-ffff-4e1f-a2c9-71edcb8c4c6c)
+
+
+Professional-grade real-time upscaling application for Windows.
+
+## Features
+- **Anti-Cheat Safe**: No DLL injection or API hooking.
+- **High Performance**: Optimized C core with DirectX 11.
+- **Custom Upscaling**: FSR-inspired spatial upscaling.
+- **Experimental CNN**: Ultra-quality mode for Pascal GPUs and newer.
+
+## Structure
+- `core/`: C engine for capture and upscaling.
+- `shaders/`: HLSL compute shaders.
+- `ui/`: PySide6 modern user interface.
+- `cnn/`: CNN model training and export scripts.
+- `docs/`: Technical documentation.
+
+## License
+MIT License
+![ana](https://github.com/user-attachments/assets/d1867367-6e2f-4e05-9dcb-d687886f31ef)
 <svg width="1200" height="350" viewBox="0 0 1200 350" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -42,23 +64,3 @@
     NovaScale
   </text>
 </svg>
-
-# NovaScale
-
-Professional-grade real-time upscaling application for Windows.
-
-## Features
-- **Anti-Cheat Safe**: No DLL injection or API hooking.
-- **High Performance**: Optimized C core with DirectX 11.
-- **Custom Upscaling**: FSR-inspired spatial upscaling.
-- **Experimental CNN**: Ultra-quality mode for Pascal GPUs and newer.
-
-## Structure
-- `core/`: C engine for capture and upscaling.
-- `shaders/`: HLSL compute shaders.
-- `ui/`: PySide6 modern user interface.
-- `cnn/`: CNN model training and export scripts.
-- `docs/`: Technical documentation.
-
-## License
-MIT License
