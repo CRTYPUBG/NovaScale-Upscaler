@@ -3,6 +3,18 @@
 #include <d3d11.h>
 #include <process.h>
 #include <stdio.h>
+#include <time.h>
+
+void Engine_Log(const char* message) {
+    FILE* f = fopen("novascale_engine.log", "a");
+    if (f) {
+        time_t now = time(NULL);
+        char* t = ctime(&now);
+        if (t) t[24] = '\0'; // Remove newline
+        fprintf(f, "[%s] %s\n", t ? t : "Unknown", message);
+        fclose(f);
+    }
+}
 
 // Forward declarations for internal modules
 bool Capture_Initialize(ID3D11Device* device, ID3D11DeviceContext* context);
@@ -14,9 +26,9 @@ bool Present_Initialize(ID3D11Device* device, uint32_t width, uint32_t height);
 void Present_Cleanup();
 void Present_Frame(ID3D11DeviceContext* context, ID3D11Texture2D* upscaled_texture);
 
-bool Upscale_Spatial_Init(ID3D11Device* device);
-void Upscale_Spatial_Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* input_srv, ID3D11UnorderedAccessView* output_uav, uint32_t in_w, uint32_t in_h, uint32_t out_w, uint32_t out_h, float sharpness);
-void Upscale_Spatial_Cleanup();
+bool Upscale_Basic_Init(ID3D11Device* device);
+void Upscale_Basic_Process(ID3D11DeviceContext* context, ID3D11ShaderResourceView* input_srv, ID3D11UnorderedAccessView* output_uav, uint32_t in_w, uint32_t in_h, uint32_t out_w, uint32_t out_h);
+void Upscale_Basic_Cleanup();
 
 static struct {
     ID3D11Device* device;
@@ -42,12 +54,11 @@ void Engine_Worker(void* arg) {
         ID3D11Texture2D* frame = Capture_AcquireFrame(&in_w, &in_h);
         
         if (frame) {
-            // Create SRV for input if needed (in a real app we'd cache these)
             ID3D11ShaderResourceView* input_srv = NULL;
             g_engine.device->lpVtbl->CreateShaderResourceView(g_engine.device, (ID3D11Resource*)frame, NULL, &input_srv);
 
-            // Processing
-            Upscale_Spatial_Process(g_engine.context, input_srv, g_engine.upscale_uav, in_w, in_h, g_engine.out_w, g_engine.out_h, g_engine.config.sharpness);
+            // Processing (Alpha: Basic Bilinear)
+            Upscale_Basic_Process(g_engine.context, input_srv, g_engine.upscale_uav, in_w, in_h, g_engine.out_w, g_engine.out_h);
 
             // Presentation
             Present_Frame(g_engine.context, g_engine.upscale_texture);
@@ -65,24 +76,38 @@ void Engine_Worker(void* arg) {
 }
 
 EXPORT bool NovaScale_Initialize() {
+    Engine_Log("NovaScale_Initialize called");
     D3D_FEATURE_LEVEL fl = D3D_FEATURE_LEVEL_11_0;
     HRESULT hr = D3D11CreateDevice(NULL, D3D_DRIVER_TYPE_HARDWARE, NULL, 0, &fl, 1, D3D11_SDK_VERSION, &g_engine.device, NULL, &g_engine.context);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr)) {
+        char buf[128];
+        sprintf(buf, "D3D11CreateDevice failed: 0x%08X", (unsigned int)hr);
+        Engine_Log(buf);
+        return false;
+    }
 
-    if (!Capture_Initialize(g_engine.device, g_engine.context)) return false;
-    if (!Upscale_Spatial_Init(g_engine.device)) return false;
+    if (!Capture_Initialize(g_engine.device, g_engine.context)) {
+        Engine_Log("Capture_Initialize failed");
+        return false;
+    }
+    
+    if (!Upscale_Basic_Init(g_engine.device)) {
+        Engine_Log("Upscale_Basic_Init failed");
+        return false;
+    }
 
+    Engine_Log("NovaScale_Initialize succeeded");
     return true;
 }
 
 EXPORT bool NovaScale_Start(Config config) {
+    Engine_Log("NovaScale_Start called");
     if (g_engine.is_running) return true;
     
     g_engine.config = config;
-    g_engine.out_w = 1920; // Default for now
+    g_engine.out_w = 1920; 
     g_engine.out_h = 1080;
 
-    // Create Upscale Texture & UAV
     D3D11_TEXTURE2D_DESC td = {0};
     td.Width = g_engine.out_w;
     td.Height = g_engine.out_h;
@@ -93,14 +118,22 @@ EXPORT bool NovaScale_Start(Config config) {
     td.Usage = D3D11_USAGE_DEFAULT;
     td.BindFlags = D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE;
     
-    g_engine.device->lpVtbl->CreateTexture2D(g_engine.device, &td, NULL, &g_engine.upscale_texture);
+    HRESULT hr = g_engine.device->lpVtbl->CreateTexture2D(g_engine.device, &td, NULL, &g_engine.upscale_texture);
+    if (FAILED(hr)) {
+        Engine_Log("CreateTexture2D failed");
+        return false;
+    }
     g_engine.device->lpVtbl->CreateUnorderedAccessView(g_engine.device, (ID3D11Resource*)g_engine.upscale_texture, NULL, &g_engine.upscale_uav);
     g_engine.device->lpVtbl->CreateShaderResourceView(g_engine.device, (ID3D11Resource*)g_engine.upscale_texture, NULL, &g_engine.upscale_srv);
 
-    if (!Present_Initialize(g_engine.device, g_engine.out_w, g_engine.out_h)) return false;
+    if (!Present_Initialize(g_engine.device, g_engine.out_w, g_engine.out_h)) {
+        Engine_Log("Present_Initialize failed");
+        return false;
+    }
 
     g_engine.is_running = true;
     g_engine.worker_thread = (HANDLE)_beginthread(Engine_Worker, 0, NULL);
+    Engine_Log("Engine worker thread started");
     return true;
 }
 
@@ -112,7 +145,7 @@ EXPORT void NovaScale_Shutdown() {
         g_engine.worker_thread = NULL;
     }
 
-    Upscale_Spatial_Cleanup();
+    Upscale_Basic_Cleanup();
     Capture_Cleanup();
     Present_Cleanup();
 
@@ -127,6 +160,7 @@ EXPORT void NovaScale_Shutdown() {
 }
 
 EXPORT void NovaScale_Stop() {
+    Engine_Log("NovaScale_Stop called");
     g_engine.is_running = false;
 }
 

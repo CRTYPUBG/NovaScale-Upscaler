@@ -1,0 +1,9 @@
+
+==================================================
+CRASH DETECTED AT: 2026-01-15 06:08:43.311036
+Traceback (most recent call last):
+  File "main.py", line 78, in <module>
+  File "main.py", line 69, in main
+  File "main_window.py", line 48, in __init__
+  File "main.py", line 26, in write
+AttributeError: 'NoneType' object has no attribute 'write'

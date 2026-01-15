@@ -1,6 +1,7 @@
 import sys
 import ctypes
 import os
+import traceback
 from PySide6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QFont, QColor, QIcon, QPixmap
@@ -44,6 +45,7 @@ class MainWindow(QMainWindow):
         
         # Load C Core
         self.lib = None
+        print("[UI] Attempting to load engine core...")
         try:
             # Check locally, then in packed path
             dll_candidates = [
@@ -52,18 +54,29 @@ class MainWindow(QMainWindow):
                 resource_path("novascale.dll")
             ]
             
+            loaded_path = None
             for dll_path in dll_candidates:
                 if os.path.exists(dll_path):
+                    print(f"[UI] Found candidate: {dll_path}")
                     self.lib = ctypes.CDLL(dll_path)
+                    loaded_path = dll_path
                     break
             
             if self.lib:
+                print(f"[UI] Successfully loaded: {loaded_path}")
                 self.lib.NovaScale_GetStats.restype = Stats
                 self.lib.NovaScale_Initialize.restype = ctypes.c_bool
                 self.lib.NovaScale_Start.argtypes = [Config]
-                self.lib.NovaScale_Initialize()
+                
+                init_result = self.lib.NovaScale_Initialize()
+                print(f"[UI] NovaScale_Initialize returned: {init_result}")
+                if not init_result:
+                    print("[UI] CRITICAL: Engine initialization failed.")
+            else:
+                print("[UI] ERROR: Could not find novascale.dll in any candidate path.")
         except Exception as e:
-            print(f"Failed to load engine core: {e}")
+            print(f"[UI] FATAL ERROR during engine loading: {e}")
+            traceback.print_exc()
 
         self.init_ui()
         self.apply_theme()
@@ -164,19 +177,30 @@ class MainWindow(QMainWindow):
         self.is_running = not self.is_running
         
         if self.is_running:
+            print("[UI] Starting Engine...")
             cfg = Config()
             cfg.mode = self.settings.mode_combo.currentIndex()
             cfg.scale_factor = self.settings.scale_slider.value() / 10.0
             cfg.sharpness = self.settings.sharp_slider.value() / 100.0
             
+            print(f"[UI] Config: Mode={cfg.mode}, Scale={cfg.scale_factor}, Sharp={cfg.sharpness}")
+            
             if self.lib:
-                self.lib.NovaScale_Start(cfg)
+                try:
+                    res = self.lib.NovaScale_Start(cfg)
+                    print(f"[UI] NovaScale_Start returned: {res}")
+                except Exception as e:
+                    print(f"[UI] EXCEPTION during NovaScale_Start: {e}")
+                    traceback.print_exc()
+            else:
+                print("[UI] ERROR: Library not loaded, cannot start engine.")
             
             self.start_btn.setText("STOP ENGINE")
             self.start_btn.setObjectName("stop")
             self.status_text.setText("STATUS: ENGINE ACTIVE")
             self.status_text.setStyleSheet("color: #00f2ff;")
         else:
+            print("[UI] Stopping Engine...")
             if self.lib:
                 self.lib.NovaScale_Stop()
             
